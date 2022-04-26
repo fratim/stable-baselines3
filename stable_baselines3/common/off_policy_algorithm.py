@@ -395,7 +395,9 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             The two differs when the action space is not normalized (bounds are not [-1, 1]).
         """
         # Select action randomly or according to policy
-        if self.num_timesteps < learning_starts and not (self.use_sde and self.use_sde_at_warmup):
+        if action_noise is not None and action_noise == "random":
+            unscaled_action = np.array([self.action_space.sample() for _ in range(n_envs)])
+        elif self.num_timesteps < learning_starts and not (self.use_sde and self.use_sde_at_warmup):
             # Warmup phase
             unscaled_action = np.array([self.action_space.sample() for _ in range(n_envs)])
         else:
@@ -409,7 +411,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             scaled_action = self.policy.scale_action(unscaled_action)
 
             # Add noise to the action (improve exploration)
-            if action_noise is not None:
+            if action_noise is not None and action_noise != "random":
                 scaled_action = np.clip(scaled_action + action_noise(), -1, 1)
 
             # We store the scaled action in the buffer
@@ -556,7 +558,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             assert train_freq.unit == TrainFrequencyUnit.STEP, "You must use only one env when doing episodic training."
 
         # Vectorize action noise if needed
-        if action_noise is not None and env.num_envs > 1 and not isinstance(action_noise, VectorizedActionNoise):
+        if action_noise is not None and action_noise != "random" and env.num_envs > 1 and not isinstance(action_noise, VectorizedActionNoise):
             action_noise = VectorizedActionNoise(action_noise, env.num_envs)
 
         if self.use_sde:
@@ -605,7 +607,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                     num_collected_episodes += 1
                     self._episode_num += 1
 
-                    if action_noise is not None:
+                    if action_noise is not None and action_noise is not "random":
                         kwargs = dict(indices=[idx]) if env.num_envs > 1 else {}
                         action_noise.reset(**kwargs)
 

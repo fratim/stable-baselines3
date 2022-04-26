@@ -138,7 +138,7 @@ class TD3(OffPolicyAlgorithm):
         self.critic = self.policy.critic
         self.critic_target = self.policy.critic_target
 
-    def train(self, gradient_steps: int, batch_size: int = 100) -> None:
+    def train(self, gradient_steps: int, batch_size: int = 100, update_actor=True) -> None:
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)
 
@@ -177,14 +177,17 @@ class TD3(OffPolicyAlgorithm):
             self.critic.optimizer.step()
 
             # Delayed policy updates
-            if self._n_updates % self.policy_delay == 0:
+            if self._n_updates % self.policy_delay == 0 and update_actor:
                 # Compute actor loss
                 actor_loss = -self.critic.q1_forward(replay_data.observations, self.actor(replay_data.observations)).mean()
                 actor_losses.append(actor_loss.item())
 
                 # Optimize the actor
                 self.actor.optimizer.zero_grad()
+
                 actor_loss.backward()
+                th.nn.utils.clip_grad_norm_(self.actor.parameters(), 40)                
+
                 self.actor.optimizer.step()
 
                 polyak_update(self.critic.parameters(), self.critic_target.parameters(), self.tau)
