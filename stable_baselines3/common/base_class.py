@@ -295,13 +295,17 @@ class BaseAlgorithm(ABC):
         :param optimizers:
             An optimizer or a list of optimizers.
         """
-        # Log the current learning rate
-        self.logger.record("train/learning_rate", self.lr_schedule(self._current_progress_remaining))
 
-        if not isinstance(optimizers, list):
-            optimizers = [optimizers]
-        for optimizer in optimizers:
-            update_learning_rate(optimizer, self.lr_schedule(self._current_progress_remaining))
+        # Log the current learning rate
+        self.logger.record("train/learning_rate_actor", self.actor.optimizer.param_groups[0]["lr"])
+        self.logger.record("train/learning_rate_critic", self.critic.optimizer.param_groups[0]["lr"])
+
+        # raise ValueError("his should never be called")
+        #
+        # if not isinstance(optimizers, list):
+        #     optimizers = [optimizers]
+        # for optimizer in optimizers:
+        #     update_learning_rate(optimizer, self.lr_schedule(self._current_progress_remaining))
 
     def _excluded_save_params(self) -> List[str]:
         """

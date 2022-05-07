@@ -166,7 +166,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             self.train_freq = TrainFreq(*train_freq)
 
     def _setup_model(self) -> None:
-        self._setup_lr_schedule()
+        # self._setup_lr_schedule()
         self.set_random_seed(self.seed)
 
         # Use DictReplayBuffer if needed
@@ -213,7 +213,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         self.policy = self.policy_class(  # pytype:disable=not-instantiable
             self.observation_space,
             self.action_space,
-            self.lr_schedule,
+            self.learning_rate,
             **self.policy_kwargs,  # pytype:disable=not-instantiable
         )
         self.policy = self.policy.to(self.device)
@@ -526,6 +526,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         action_noise: Optional[ActionNoise] = None,
         learning_starts: int = 0,
         log_interval: Optional[int] = None,
+        scaler=None,
     ) -> RolloutReturn:
         """
         Collect experiences and store them into a ``ReplayBuffer``.
@@ -578,6 +579,9 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             # Rescale and perform action
             new_obs, rewards, dones, infos = env.step(actions)
 
+            if scaler is not None:
+                new_obs = scaler.transform(new_obs)
+           
             self.num_timesteps += env.num_envs
             num_collected_steps += 1
 
@@ -607,7 +611,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                     num_collected_episodes += 1
                     self._episode_num += 1
 
-                    if action_noise is not None and action_noise is not "random":
+                    if action_noise is not None and action_noise != "random":
                         kwargs = dict(indices=[idx]) if env.num_envs > 1 else {}
                         action_noise.reset(**kwargs)
 

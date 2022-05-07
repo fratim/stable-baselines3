@@ -110,7 +110,7 @@ class TD3Policy(BasePolicy):
         self,
         observation_space: gym.spaces.Space,
         action_space: gym.spaces.Space,
-        lr_schedule: Schedule,
+        lr,
         net_arch: Optional[Union[List[int], Dict[str, List[int]]]] = None,
         activation_fn: Type[nn.Module] = nn.ReLU,
         features_extractor_class: Type[BaseFeaturesExtractor] = FlattenExtractor,
@@ -163,9 +163,9 @@ class TD3Policy(BasePolicy):
         self.critic, self.critic_target = None, None
         self.share_features_extractor = share_features_extractor
 
-        self._build(lr_schedule)
+        self._build(lr)
 
-    def _build(self, lr_schedule: Schedule) -> None:
+    def _build(self, lr) -> None:
         # Create actor and target
         # the features extractor should not be shared
         self.actor = self.make_actor(features_extractor=None)
@@ -173,7 +173,7 @@ class TD3Policy(BasePolicy):
         # Initialize the target to have the same weights as the actor
         self.actor_target.load_state_dict(self.actor.state_dict())
 
-        self.actor.optimizer = self.optimizer_class(self.actor.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
+        self.actor.optimizer = self.optimizer_class(self.actor.parameters(), lr=lr, **self.optimizer_kwargs)
 
         if self.share_features_extractor:
             self.critic = self.make_critic(features_extractor=self.actor.features_extractor)
@@ -189,13 +189,16 @@ class TD3Policy(BasePolicy):
             self.critic_target = self.make_critic(features_extractor=None)
 
         self.critic_target.load_state_dict(self.critic.state_dict())
-        self.critic.optimizer = self.optimizer_class(self.critic.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
+        self.critic.optimizer = self.optimizer_class(self.critic.parameters(), lr=lr, **self.optimizer_kwargs)
 
         # Target networks should always be in eval mode
         self.actor_target.set_training_mode(False)
         self.critic_target.set_training_mode(False)
 
     def _get_constructor_parameters(self) -> Dict[str, Any]:
+
+        raise ValueError
+
         data = super()._get_constructor_parameters()
 
         data.update(

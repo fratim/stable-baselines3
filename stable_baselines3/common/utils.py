@@ -70,6 +70,8 @@ def update_learning_rate(optimizer: th.optim.Optimizer, learning_rate: float) ->
     :param optimizer:
     :param learning_rate:
     """
+    raise ValueError("This should never be called")
+
     for param_group in optimizer.param_groups:
         param_group["lr"] = learning_rate
 

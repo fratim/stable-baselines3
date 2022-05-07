@@ -306,6 +306,7 @@ class EvalCallback(EventCallback):
         render: bool = False,
         verbose: int = 1,
         warn: bool = True,
+        video_recorder=None,
     ):
         super(EvalCallback, self).__init__(callback_after_eval, verbose=verbose)
 
@@ -321,6 +322,8 @@ class EvalCallback(EventCallback):
         self.deterministic = deterministic
         self.render = render
         self.warn = warn
+
+        self.video_recorder=video_recorder
 
         # Convert to VecEnv for consistency
         if not isinstance(eval_env, VecEnv):
@@ -399,6 +402,8 @@ class EvalCallback(EventCallback):
                 return_episode_rewards=True,
                 warn=self.warn,
                 callback=self._log_success_callback,
+                video_recorder=self.video_recorder,
+                step_training=self.n_calls,
             )
 
             if self.log_path is not None:

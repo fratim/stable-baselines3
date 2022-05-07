@@ -6,7 +6,9 @@ import numpy as np
 
 from stable_baselines3.common import base_class
 from stable_baselines3.common.vec_env import DummyVecEnv, VecEnv, VecMonitor, is_vecenv_wrapped
+from stable_baselines3 import video
 
+import time
 
 def evaluate_policy(
     model: "base_class.BaseAlgorithm",
@@ -18,6 +20,8 @@ def evaluate_policy(
     reward_threshold: Optional[float] = None,
     return_episode_rewards: bool = False,
     warn: bool = True,
+    video_recorder=None,
+    step_training=-1,
 ) -> Union[Tuple[float, float], Tuple[List[float], List[int]]]:
     """
     Runs policy for ``n_eval_episodes`` episodes and returns average reward.
@@ -82,11 +86,25 @@ def evaluate_policy(
     observations = env.reset()
     states = None
     episode_starts = np.ones((env.num_envs,), dtype=bool)
+
+    assert n_envs == 1
+    video_recorder.init(enabled=True)
+
+    step = 0
+
     while (episode_counts < episode_count_targets).any():
+
         actions, states = model.predict(observations, state=states, episode_start=episode_starts, deterministic=deterministic)
+
         observations, rewards, dones, infos = env.step(actions)
+
         current_rewards += rewards
         current_lengths += 1
+
+        if step % 20 == 0 and episode_counts[0] == 0:
+            video_recorder.record(env.envs[0].env)
+        step += 1
+
         for i in range(n_envs):
             if episode_counts[i] < episode_count_targets[i]:
 
@@ -119,8 +137,12 @@ def evaluate_policy(
                     current_rewards[i] = 0
                     current_lengths[i] = 0
 
+
+
         if render:
             env.render()
+
+    video_recorder.save(f'{step_training}.mp4')
 
     mean_reward = np.mean(episode_rewards)
     std_reward = np.std(episode_rewards)
