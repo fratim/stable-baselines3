@@ -592,6 +592,8 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                 return RolloutReturn(num_collected_steps * env.num_envs, num_collected_episodes, continue_training=False)
 
             # Retrieve reward and episode length if using Monitor wrapper
+            if dones[0]:
+                infos[0]["episode"]["l"] = infos[0]["x_position"]
             self._update_info_buffer(infos, dones)
 
             # Store data in replay buffer (normalized action and unnormalized observation)
