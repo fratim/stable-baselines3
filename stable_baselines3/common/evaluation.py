@@ -8,6 +8,8 @@ from stable_baselines3.common import base_class
 from stable_baselines3.common.vec_env import DummyVecEnv, VecEnv, VecMonitor, is_vecenv_wrapped
 from stable_baselines3 import video
 
+import wandb
+
 import time
 
 def evaluate_policy(
@@ -79,6 +81,24 @@ def evaluate_policy(
     episode_lengths = []
     x_positions_last = []
 
+    positions_0_means = []
+    positions_1_means = []
+    positions_2_means = []
+
+    positions_0_medians = []
+    positions_1_medians = []
+    positions_2_medians = []
+
+    positions_0_stds = []
+    positions_1_stds = []
+    positions_2_stds = []
+
+    positions_0_maxs = []
+    positions_1_maxs = []
+    positions_2_maxs = []
+
+
+
     episode_counts = np.zeros(n_envs, dtype="int")
     # Divides episodes among different sub environments in the vector as evenly as possible
     episode_count_targets = np.array([(n_eval_episodes + i) // n_envs for i in range(n_envs)], dtype="int")
@@ -94,17 +114,26 @@ def evaluate_policy(
 
     step = 0
 
+    positions_0 = []
+    positions_1 = []
+    positions_2 = []
+
     while (episode_counts < episode_count_targets).any():
 
         actions, states = model.predict(observations, state=states, episode_start=episode_starts, deterministic=deterministic)
 
         observations, rewards, dones, infos = env.step(actions)
 
+        positions_0.append(observations[0][0])
+        positions_1.append(observations[0][1])
+        positions_2.append(observations[0][2])
+
         current_rewards += rewards
         current_lengths += 1
 
-        if step % 20 == 0 and episode_counts[0] == 0:
+        if step % 2 == 0:
             video_recorder.record(env.envs[0].env)
+            print(f"video step {step} saved")
         step += 1
 
         for i in range(n_envs):
@@ -120,7 +149,31 @@ def evaluate_policy(
                     callback(locals(), globals())
 
                 if dones[i]:
+
+                    video_recorder.save(f'{episode_counts.sum()}.mp4')
+                    video_recorder.init(enabled=True)
+
                     x_positions_last.append(infos[0]["x_position"])
+
+                    positions_0_means.append(np.mean(positions_0))
+                    positions_0_medians.append(np.median(positions_0))
+                    positions_0_stds.append(np.std(positions_0))
+                    positions_0_maxs.append(np.max(positions_0))
+
+                    positions_1_means.append(np.mean(positions_1))
+                    positions_1_medians.append(np.median(positions_1))
+                    positions_1_stds.append(np.std(positions_1))
+                    positions_1_maxs.append(np.max(positions_1))
+
+                    positions_2_means.append(np.mean(positions_2))
+                    positions_2_medians.append(np.median(positions_2))
+                    positions_2_stds.append(np.std(positions_2))
+                    positions_2_maxs.append(np.max(positions_2))
+
+                    positions_0 = []
+                    positions_1 = []
+                    positions_2 = []
+
                     if is_monitor_wrapped:
                         # Atari wrapper can send a "done" signal when
                         # the agent loses a life, but it does not correspond
@@ -151,6 +204,23 @@ def evaluate_policy(
     std_reward = np.std(episode_rewards)
     if reward_threshold is not None:
         assert mean_reward > reward_threshold, "Mean reward below threshold: " f"{mean_reward:.2f} < {reward_threshold:.2f}"
+
+    # wandb.log({
+    #     "eval/position_0_mean": np.mean(positions_0_means),
+    #     "eval/position_0_median": np.mean(positions_0_medians),
+    #     "eval/position_0_std": np.mean(positions_0_stds),
+    #     "eval/position_0_max": np.mean(positions_0_maxs),
+    #     "eval/position_1_mean": np.mean(positions_1_means),
+    #     "eval/position_1_median": np.mean(positions_1_medians),
+    #     "eval/position_1_std": np.mean(positions_1_stds),
+    #     "eval/position_1_max": np.mean(positions_1_maxs),
+    #     "eval/position_2_mean": np.mean(positions_2_means),
+    #     "eval/position_2_median": np.mean(positions_2_medians),
+    #     "eval/position_2_std": np.mean(positions_2_stds),
+    #     "eval/position_2_max": np.mean(positions_2_maxs),
+    # }
+    # )
+
     if return_episode_rewards:
         return episode_rewards, x_positions_last
     return mean_reward, std_reward

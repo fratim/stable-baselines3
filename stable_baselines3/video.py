@@ -10,10 +10,10 @@ import time
 import os
 
 class VideoRecorder(object):
-    def __init__(self, save_path, height=256, width=256, camera_id=0, fps=30):
+    def __init__(self, save_path, height=1024, width=1024, camera_id=0, fps=30):
         # self.save_dir = utils.make_dir(root_dir, 'video') if root_dir else None
         self.save_dir = os.path.join(save_path, "videos")
-        os.makedirs(self.save_dir)
+        os.makedirs(self.save_dir, exist_ok=True)
         self.height = height
         self.width = width
         self.camera_id = camera_id
@@ -39,4 +39,4 @@ class VideoRecorder(object):
         FPS = 4
         video_array = np.stack(self.frames, axis=0)
         video_array = np.moveaxis(video_array, 3, 1)
-        wandb.log({"video": wandb.Video(video_array, fps=FPS, format="gif")})
+        # wandb.log({"video": wandb.Video(video_array, fps=FPS, format="gif")})
